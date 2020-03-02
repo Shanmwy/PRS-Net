@@ -101,7 +101,7 @@ class PRS_Net(nn.Module):
 
 class LossSymmetryDistance(object):
     def __call__(self, outputs: torch.tensor, sample):
-        self.loss = torch.tensor([0])
+        self.loss = torch.zeros(outputs.shape[0], 6)
         for i in range(outputs.shape[0]):
             self.voxel = sample['voxel'][i]
             self.points = sample['points'][i]
@@ -110,10 +110,10 @@ class LossSymmetryDistance(object):
             # unfinished
             for j in range(0, 3, 1):
                 self.transformedPoints = self.reflectTransform(outputs[i][j])
-                self.loss = self.loss
+                self.loss[i][j] = self.loss[i][j]
             for j in range(3, 6, 1):
                 self.transformedPoints = self.rotateTransform(outputs[i][j])
-                self.loss = self.loss
+                self.loss[i][j] = self.loss[i][j]
 
         return self.loss
 
@@ -143,7 +143,7 @@ class LossSymmetryDistance(object):
 
 class LossRegularization(object):
     def __call__(self, outputs: torch.tensor):
-        self.loss = torch.tensor([0])
+        self.loss = torch.zeros(outputs.shape[0])
 
         for i in range(outputs.shape[0]):
             M1 = outputs[i][0:3, 0:3]
@@ -154,6 +154,36 @@ class LossRegularization(object):
             II = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
             A = torch.mm(M1, M1.t()) - II
             B = torch.mm(M2, M2.t()) - II
-            self.loss = self.loss + torch.sum(A**2) + torch.sum(B**2)
+            self.loss[i] = torch.sum(A**2) + torch.sum(B**2)
 
         return self.loss
+
+
+class validateOutputs(object):
+    def __call__(self, outputs: torch.tensor, lsd: torch.tensor, ml: float,
+                 mc: float):
+        self.isRemoved = [False, False, False, False, False, False]
+        for i in range(6):
+            if lsd[i] > ml:
+                self.isRemoved[i] = True
+        for i in range(2):
+            if self.isRemoved[i] is True:
+                continue
+            for j in range(i + 1, 3):
+                if self.isRemoved[j] is True:
+                    continue
+                if self.cosDihedralAngle(outputs[i][0:3],
+                                         outputs[j][0:3]) > mc:
+                    if lsd[i] > lsd[j]:
+                        self.isRemoved[i] = True
+                    else:
+                        self.isRemoved[j] = True
+        for i in range(6):
+            if self.isRemoved[i] is True:
+                outputs[i] = torch.zeros(4)
+        return outputs
+
+    def cosDihedralAngle(self, normal1: torch.tensor, normal2: torch.tensor):
+        return torch.abs(
+            torch.dot(normal1, normal2) /
+            (torch.norm(normal1) * torch.norm(normal2)))

@@ -53,23 +53,27 @@ def main():
 
     optimizer = torch.optim.Adam(PRS_Net.parameters(), lr=args.lr)
 
-    # training begins
-    for epoch in range(args.max_epoch):
-        for i, sample in enumerate(trainLoader, 0):
-            voxel = sample['voxel']
-            optimizer.zero_grad()
-            outputs = PRS_Net(voxel)
-            lsd = LossSymmetryDistance(outputs, sample)
-            lreg = args.wr * LossRegularization(outputs)
-            loss = lsd + lreg
-            loss.backward()
-            optimizer.step()
+    with open(osp.join(cfg.resultDir, 'trainLog.txt'), 'w') as trainLog:
+        # training begins
+        for epoch in range(args.max_epoch):
+            for i, sample in enumerate(trainLoader, 0):
+                voxel = sample['voxel']
+                optimizer.zero_grad()
+                outputs = PRS_Net(voxel)
+                lsd = LossSymmetryDistance(outputs, sample)
+                lreg = LossRegularization(outputs)
+                lsdm = torch.sum(lsd) / args.single_batch_size
+                lregm = torch.sum(lreg) / args.single_batch_size
+                loss = lsdm + args.wr * lregm
+                loss.backward()
+                optimizer.step()
+                status = "{}th epoch, {}th sample, lsd is {}, lreg is {}\n".format(
+                    epoch, i, lsdm, lregm)
+                print(status)
+                trainLog.write(status)
 
-            print("{}th epoch, {}th sample, lsd is {}, lreg is {}".format(
-                epoch, i, lsd, lreg))
-
-    torch.save(PRS_Net, osp.join(cfg.modelDir, "PRS_Net.pkl"))
-    print(outputs[0])
+        torch.save(PRS_Net, osp.join(cfg.modelDir, "PRS_Net.pkl"))
+        print('training finished')
 
 
 if __name__ == '__main__':
