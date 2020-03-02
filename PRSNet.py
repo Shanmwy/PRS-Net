@@ -178,6 +178,20 @@ class validateOutputs(object):
                         self.isRemoved[i] = True
                     else:
                         self.isRemoved[j] = True
+
+        for i in range(3, 5, 1):
+            if self.isRemoved[i] is True:
+                continue
+            for j in range(i + 1, 6):
+                if self.isRemoved[j] is True:
+                    continue
+                if self.cosDihedralAngle(outputs[i][1:4],
+                                         outputs[j][1:4]) > mc:
+                    if lsd[i] > lsd[j]:
+                        self.isRemoved[i] = True
+                    else:
+                        self.isRemoved[j] = True
+
         for i in range(6):
             if self.isRemoved[i] is True:
                 outputs[i] = torch.zeros(4)
