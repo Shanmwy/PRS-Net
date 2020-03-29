@@ -1,6 +1,12 @@
 import torch
 
 
+def rotate(q: torch.tensor, point: torch.tensor):
+    inPoint = torch.zeros(4)
+    inPoint[1:4] = point
+    return (product(product(q, inPoint), inverse(q)))[1:4]
+
+
 def product(q1: torch.tensor, q2: torch.tensor):
     qout = torch.zeros(4)
     qout[0] = q1[0] * q2[0] - torch.dot(q1[1:4], q2[1:4])

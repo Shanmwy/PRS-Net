@@ -11,13 +11,13 @@ parser.add_argument('-i',
                     '--max-epoch',
                     type=int,
                     nargs='?',
-                    default=10,
+                    default=5,
                     help='max epoch')
 parser.add_argument('-b',
                     '--single-batch-size',
                     type=int,
                     nargs='?',
-                    default=5,
+                    default=4,
                     help='set batch size for each gpu')
 parser.add_argument('-l',
                     '--lr',
@@ -33,7 +33,7 @@ parser.add_argument('-w',
                     '--wr',
                     type=float,
                     nargs='?',
-                    default=100,
+                    default=3200,
                     help='weight of LossRegularization')
 args = parser.parse_args()
 
@@ -67,8 +67,8 @@ def main():
                 loss = lsdm + args.wr * lregm
                 loss.backward()
                 optimizer.step()
-                status = "{}th epoch, {}th sample, lsd is {}, lreg is {}\n".format(
-                    epoch, i, lsdm, lregm)
+                status = "{}th epoch, {}th mini-batch, \
+lsd is {}, lreg is {}, outputs are {}\n".format(epoch, i, lsdm, lregm, outputs)
                 print(status)
                 trainLog.write(status)
 

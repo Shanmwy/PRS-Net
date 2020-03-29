@@ -2,6 +2,10 @@ from torch import nn
 from config import cfg
 import torch
 import myQuaternion
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+import matplotlib.pyplot as plt
+import time
 
 
 class PRS_Net(nn.Module):
@@ -51,17 +55,25 @@ class PRS_Net(nn.Module):
     def forward(self, voxel):
         self.outputs = torch.zeros(voxel.shape[0], 6, 4)
 
+        # print(torch.sum(voxel[0]-voxel[1]))
         voxel = self.ConvLayer1(voxel)
+        # print(torch.sum(voxel[0]-voxel[1]))
         voxel = self.ConvLayer2(voxel)
+        # print(torch.sum(voxel[0]-voxel[1]))
         voxel = self.ConvLayer3(voxel)
+        # print(torch.sum(voxel[0]-voxel[1]))
         voxel = self.ConvLayer4(voxel)
+        # print(torch.sum(voxel[0]-voxel[1]))
         voxel = self.ConvLayer5(voxel)  # voxel.shape = [batch_size,64,1,1,1]
+        # print(torch.sum(voxel[0]-voxel[1]))
         voxel = voxel.view(voxel.shape[0], 64)
+        # print(torch.sum(voxel[0]-voxel[1]))
 
         a = self.FCLayerSP11(voxel)
         a = self.FCLayerSP12(a)
         a = self.FCLayerSP13(a)
         self.assign2Outputs(self.unitize(a), 0)
+        # print(a)
 
         a = self.FCLayerSP21(voxel)
         a = self.FCLayerSP22(a)
@@ -107,37 +119,58 @@ class LossSymmetryDistance(object):
             self.points = sample['points'][i]
             self.nearestPointOfVoxel = sample['nearestPointOfVoxel'][i]
 
-            # unfinished
             for j in range(0, 3, 1):
                 self.transformedPoints = self.reflectTransform(outputs[i][j])
-                self.loss[i][j] = self.loss[i][j]
+                self.loss[i][j] = self.overAllDistance()
+
+                fig = plt.figure()
+                ax = fig.gca(projection='3d')
+                ax.scatter(self.transformedPoints[:, 0].tolist(),
+                           self.transformedPoints[:, 1].tolist(),
+                           self.transformedPoints[:, 2].tolist(),
+                           color='y')
+                ax.scatter(self.points[:, 0],
+                           self.points[:, 1],
+                           self.points[:, 2],
+                           color='b')
+                fig.savefig(str(time.clock()) + '_' + str(j) + '.png')
+
             for j in range(3, 6, 1):
                 self.transformedPoints = self.rotateTransform(outputs[i][j])
-                self.loss[i][j] = self.loss[i][j]
+                self.loss[i][j] = 0  # self.overAllDistance()
 
         return self.loss
 
+    def overAllDistance(self):
+        sumD = 0
+        for i in range(self.points.shape[0]):
+            x = int(self.transformedPoints[i][0] + 0.5)
+            y = int(self.transformedPoints[i][1] + 0.5)
+            z = int(self.transformedPoints[i][2] + 0.5)
+            x = 31 if x > 31 else x
+            y = 31 if y > 31 else y
+            z = 31 if z > 31 else z
+            x = 0 if x < 0 else x
+            y = 0 if y < 0 else y
+            z = 0 if z < 0 else z
+            index = int(self.nearestPointOfVoxel[0, x, y, z])
+            d = torch.norm(self.points[index] - self.transformedPoints[i])
+            sumD += d
+        return sumD
+
     def reflectTransform(self, planeParameters: torch.tensor):
         outPoints = torch.zeros_like(self.points)
-        outPoint = torch.zeros(3)
-        inPoint = torch.zeros(3)
         for i in range(self.points.shape[0]):
-            inPoint = self.points[i]
-            outPoint = inPoint - planeParameters[0:3] * (
-                torch.dot(inPoint, planeParameters[0:3]) +
-                planeParameters[3]) / torch.norm(planeParameters[0:3])
-            outPoints[i] = outPoint
+            outPoints[i] = self.points[i] - 2 * planeParameters[0:3] * (
+                torch.dot(self.points[i], planeParameters[0:3]) +
+                planeParameters[3]) / torch.dot(planeParameters[0:3],
+                                                planeParameters[0:3])
         return outPoints
 
     def rotateTransform(self, q: torch.tensor):
         outPoints = torch.zeros_like(self.points)
-        outPoint = torch.zeros(4)
-        inPoint = torch.zeros(4)
         for i in range(self.points.shape[0]):
-            inPoint[1:4] = self.points[i]
-            outPoint = myQuaternion.product(q, inPoint)
-            outPoint = myQuaternion.product(outPoint, myQuaternion.inverse(q))
-            outPoints[i] = outPoint[1:4]
+            outPoints[i] = myQuaternion.rotate(q, self.points[i])
         return outPoints
 
 

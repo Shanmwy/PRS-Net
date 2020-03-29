@@ -1,4 +1,3 @@
-import numpy
 import nrrd
 import random
 import os.path as osp
@@ -45,18 +44,40 @@ class VoxelPointsDataset(Dataset.Dataset):
 
     def __getitem__(self, idx):
 
-        nrrdPath = osp.join(self.dataDir, "NrrdData",
-                            self.nameList[idx] + ".nrrd")
+        # read voxel data
+        nrrdPath = osp.join(self.dataDir, 'MatureData', self.nameList[idx],
+                            "model.nrrd")
         nrrdData, header = nrrd.read(filename=nrrdPath)
         voxel = self.transform(nrrdData)
         voxel = voxel.view(1, 32, 32, 32)
+        # print(torch.max(voxel),torch.sum(voxel),torch.min(voxel))
 
-        # points cloud # unfinished
-        points = list([(0., 0., 0.), (1., 1., 1.)])
+        # read points data
+        updatedPcdPath = osp.join(self.dataDir, 'MatureData',
+                                  self.nameList[idx], "model.updatedpcd")
+        with open(updatedPcdPath, mode='r') as pcdFile:
+            points = list()
+            for i in range(1000):
+                line = pcdFile.readline()
+                xyz = line.split(' ')
+                points.append([float(xyz[0]), float(xyz[1]), float(xyz[2])])
         points = torch.tensor(points)
 
-        # check out the clostest point of each voxel # unfinished
+        # read nearest point of each voxel
         nearestPointOfVoxel = torch.zeros(1, 32, 32, 32)
+        npvPath = osp.join(cfg.dataDir, 'MatureData', self.nameList[idx],
+                           "model.npv")
+        with open(npvPath, mode='r') as npvFile:
+            line = npvFile.readline()
+            indices = line.strip('\n').split(' ')
+            counter = 0
+            for i in range(32):
+                for j in range(32):
+                    for k in range(32):
+                        nearestPointOfVoxel[0, i, j, k] = int(indices[counter])
+                        counter += 1
+
+        print('{}th sample is prepared'.format(idx))
 
         sample = {
             'voxel': voxel,

@@ -1,4 +1,4 @@
-# Introduction
+﻿# Introduction
 
 This is an unofficial inplementation of [VoxelNet: End-to-End Learning for Point Cloud Based 3D Object Detection](https://arxiv.org/abs/1711.06396) in TensorFlow. A large part of this project is based on the work [here](https://github.com/jeasinema/VoxelNet-tensorflow). Thanks to [@jeasinema](https://github.com/jeasinema). This work is a modified version with bugs fixed and better experimental settings to chase the results reported in the paper (still ongoing).
 
@@ -106,4 +106,33 @@ The current implementation and training scheme are able to produce results in th
 - [X] fix the infinite loop problem in `test.py`
 - [X] replace averaged calibration matrices with correct ones
 
-
+│  config.py
+│  dataPreparation.py
+│  myQuaternion.py
+│  PRSNet.py
+│  README.md
+│  test.py
+│  train.py
+│  VoxelPointsDataset.py
+│
+├─data
+│  │  binvox.exe
+│  │  dataPreparation.bat
+│  │  SurfacePointsSamplingPCL.exe
+│  │  train.csv
+│  │  val.csv
+│  │
+│  ├─MatureData
+│  │
+│  ├─ShapeNetCore.v1
+│  │
+│  └─visulization_test
+│
+├─model
+│      PRS_Net.pkl
+│
+└─result
+    │  testLog.txt
+    │  trainLog.txt
+    ├─reflectedTest
+    └─reflectedTrain
