@@ -36,6 +36,7 @@ Note that the default value of hyper-parameters were set in accordance with the 
 # TODO
 - train the network with larger dataset
 
+# Tree
 │  config.py  
 │  dataPreparation.py  
 │  myQuaternion.py  
